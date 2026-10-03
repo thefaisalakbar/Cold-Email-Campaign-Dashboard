@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cold Email Campaign Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#0B1F3B;
+    --navy-2:#0E2647;
+    --amber:#F2A93B;
+    --ember:#C1502E;
+    --bg:#070F1F;
+    --panel:#0F2544;
+    --line:rgba(255,255,255,.08);
+    --text:#EDF1F6;
+    --muted:#8FA0B5;
+    --green:#3ECF8E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Public Sans', Arial, sans-serif;
+    display:flex;
+    min-height:100vh;
+  }
+  h1,h2,h3{font-family:'Fraunces',Georgia,serif;margin:0;}
+
+  /* ---------- sidebar ---------- */
+  .sidebar{
+    width:260px;
+    flex-shrink:0;
+    background:var(--navy);
+    display:flex;
+    flex-direction:column;
+    padding:28px 20px;
+    border-right:1px solid var(--line);
+  }
+  .sidebar .eyebrow{color:var(--amber);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;}
+  .sidebar h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:28px;}
+  nav{display:flex;flex-direction:column;gap:4px;flex:1;}
+  nav button{
+    display:flex;align-items:center;gap:10px;
+    background:transparent;border:none;color:#C7D1DD;
+    font-family:'Public Sans',sans-serif;font-size:14.5px;font-weight:600;
+    padding:11px 14px;border-radius:10px;cursor:pointer;text-align:left;
+  }
+  nav button:hover{background:rgba(255,255,255,.06);}
+  nav button.active{background:linear-gradient(135deg,var(--amber),var(--ember));color:#1a1206;}
+  nav button .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.0;}
+  .live{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);padding-top:16px;border-top:1px solid var(--line);}
+  .live .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(62,207,142,.6);animation:pulse 2s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(62,207,142,.5);}
+    70%{box-shadow:0 0 0 8px rgba(62,207,142,0);}
+    100%{box-shadow:0 0 0 0 rgba(62,207,142,0);}
+  }
+
+  /* ---------- main ---------- */
+  main{flex:1;padding:32px 40px;max-width:1200px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+  .topbar h2{font-size:24px;font-weight:600;color:#fff;}
+  .btn{
+    background:var(--panel);border:1px solid var(--line);color:var(--text);
+    padding:10px 18px;border-radius:10px;font-size:13.5px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .btn:hover{border-color:rgba(255,255,255,.2);}
+  .btn.primary{background:linear-gradient(135deg,var(--amber),var(--ember));color:#1a1206;border:none;}
+
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;}
+  .card .label{font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;margin-bottom:14px;}
+  .card .num{font-family:'Fraunces',serif;font-size:32px;font-weight:600;color:#fff;}
+  .card .sub{font-size:12.5px;color:var(--muted);margin-top:6px;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:24px;}
+  .panel .panel-title{font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;margin-bottom:18px;}
+  .chart-wrap{height:280px;}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th{text-align:left;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);}
+  td{padding:12px;border-bottom:1px solid var(--line);color:var(--text);}
+  tr:last-child td{border-bottom:none;}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;text-transform:capitalize;}
+  .badge.sent{background:rgba(143,160,181,.18);color:var(--muted);}
+  .badge.open{background:rgba(242,169,59,.18);color:var(--amber);}
+  .badge.click{background:rgba(62,207,142,.18);color:var(--green);}
+  .empty{color:var(--muted);font-size:14px;padding:8px 2px;}
+  .muted-link{color:var(--muted);text-decoration:none;font-size:13px;}
+  .truncate{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom;}
+
+  .settings-item{padding:16px 0;border-bottom:1px solid var(--line);}
+  .settings-item:last-child{border-bottom:none;}
+  .settings-item .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:6px;}
+  .settings-item .v{font-size:14.5px;color:var(--text);font-family:monospace;word-break:break-all;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  @media(max-width:900px){
+    body{flex-direction:column;}
+    .sidebar{width:100%;flex-direction:row;align-items:center;padding:16px 20px;}
+    .sidebar h1,.sidebar .eyebrow{display:none;}
+    nav{flex-direction:row;flex:none;}
+    .live{display:none;}
+    main{padding:20px;}
+    .cards{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div>
+    <p class="eyebrow">Clearwater Composite Sq.</p>
+    <h1>Campaign Dashboard</h1>
+  </div>
+  <nav id="nav">
+    <button data-view="overview" class="active">Overview</button>
+    <button data-view="opens">Opens</button>
+    <button data-view="clicks">Clicks</button>
+    <button data-view="activity">Activity Log</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+  <div class="live"><span class="pulse"></span><span id="liveClock">Live</span></div>
+</div>
+
+<main>
+  <div class="topbar">
+    <h2 id="pageTitle">Overview</h2>
+    <button class="btn primary" onclick="loadAll()">Refresh now</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="view active" id="view-overview">
+    <div class="cards">
+      <div class="card">
+        <div class="label">Unique Opens</div>
+        <div class="num" id="statOpens">0</div>
+        <div class="sub" id="statOpensSub">0 total opens</div>
+      </div>
+      <div class="card">
+        <div class="label">Unique Clicks</div>
+        <div class="num" id="statClicks">0</div>
+        <div class="sub" id="statClicksSub">0 total clicks</div>
+      </div>
+      <div class="card">
+        <div class="label">Open Rate</div>
+        <div class="num" id="statOpenRate">&mdash;</div>
+        <div class="sub" id="statOpenRateSub">0 events</div>
+      </div>
+      <div class="card">
+        <div class="label">Click Rate</div>
+        <div class="num" id="statClickRate">&mdash;</div>
+        <div class="sub" id="statClickRateSub">0 events</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Opens vs. Clicks — Last 14 Days</div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Recent Activity</div>
+      <div id="recentActivity"><p class="empty">No activity recorded yet.</p></div>
+    </div>
+  </div>
+
+  <!-- OPENS -->
+  <div class="view" id="view-opens">
+    <div class="panel">
+      <div class="panel-title">All Opens</div>
+      <table>
+        <thead><tr><th>Company</th><th>Email</th><th>When</th></tr></thead>
+        <tbody id="opensTable"></tbody>
+      </table>
+      <p class="empty" id="opensEmpty">No opens recorded yet.</p>
+    </div>
+  </div>
+
+  <!-- CLICKS -->
+  <div class="view" id="view-clicks">
+    <div class="panel">
+      <div class="panel-title">All Clicks</div>
+      <table>
+        <thead><tr><th>Company</th><th>Email</th><th>Link</th><th>When</th></tr></thead>
+        <tbody id="clicksTable"></tbody>
+      </table>
+      <p class="empty" id="clicksEmpty">No clicks recorded yet.</p>
+    </div>
+  </div>
+
+  <!-- ACTIVITY LOG -->
+  <div class="view" id="view-activity">
+    <div class="panel">
+      <div class="panel-title">Full Activity Log</div>
+      <table>
+        <thead><tr><th>Event</th><th>Company</th><th>Email</th><th>When</th></tr></thead>
+        <tbody id="activityTable"></tbody>
+      </table>
+      <p class="empty" id="activityEmpty">No activity recorded yet.</p>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="view" id="view-settings">
+    <div class="panel">
+      <div class="panel-title">How tracking works</div>
+      <div class="settings-item">
+        <div class="k">Opens</div>
+        <div class="v" style="font-family:inherit;">A 1×1 tracking pixel in each email calls the tracking endpoint when opened.</div>
+      </div>
+      <div class="settings-item">
+        <div class="k">Clicks</div>
+        <div class="v" style="font-family:inherit;">Email button routes through the tracking endpoint, then redirects to the target website.</div>
+      </div>
+      <div class="settings-item">
+        <div class="k">Data source</div>
+        <div class="v" id="settingsProjectUrl">—</div>
+      </div>
+      <div class="settings-item">
+        <div class="k">Tracking endpoint</div>
+        <div class="v" id="settingsFnUrl">—</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  // ---- Supabase config ----
+  const SUPABASE_URL = "https://czfsdymayvbynvbyjsbk.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_IkuJLdUyhUd78FzS9WpGDw_JCZOt0Hg";
+  const REST_URL = SUPABASE_URL + "/rest/v1/email_events?select=*&order=created_at.desc&limit=5000";
+
+  document.getElementById("settingsProjectUrl").textContent = SUPABASE_URL;
+  document.getElementById("settingsFnUrl").textContent = SUPABASE_URL + "/functions/v1/track";
+
+  // ---- Nav ----
+  const nav = document.getElementById("nav");
+  nav.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-view]");
+    if(!btn) return;
+    nav.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById("view-" + btn.dataset.view).classList.add("active");
+    document.getElementById("pageTitle").textContent = btn.textContent;
+  });
+
+  // ---- Live clock ----
+  function tickClock(){
+    document.getElementById("liveClock").textContent =
+      "Live · " + new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', second:'2-digit'});
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // ---- Data loading ----
+  let trendChart;
+
+  function timeAgo(iso){
+    const d = new Date(iso);
+    const diffSec = Math.floor((Date.now() - d.getTime())/1000);
+    if(diffSec < 60) return diffSec + "s ago";
+    if(diffSec < 3600) return Math.floor(diffSec/60) + "m ago";
+    if(diffSec < 86400) return Math.floor(diffSec/3600) + "h ago";
+    return d.toLocaleDateString('en-US',{month:'short', day:'numeric'}) + " " + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  }
+
+  function badge(type){
+    return '<span class="badge ' + (type || 'event') + '">' + (type || 'event') + '</span>';
+  }
+
+  async function loadAll(){
+    let rows = [];
+    try{
+      const res = await fetch(REST_URL, {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY
+        }
+      });
+      if(res.ok){ rows = await res.json(); }
+    }catch(err){
+      console.error("Failed to load events:", err);
+    }
+
+    // Yahan columns ko database ke asal naam ('action' aur 'email') ke mutabiq map kiya gaya hai
+    const opens = rows.filter(r => r.action === "open");
+    const clicks = rows.filter(r => r.action === "click");
+
+    const uniqueOpens = new Set(opens.map(r => r.email)).size;
+    const uniqueClicks = new Set(clicks.map(r => r.email)).size;
+    const totalEvents = rows.length;
+
+    document.getElementById("statOpens").textContent = uniqueOpens;
+    document.getElementById("statOpensSub").textContent = opens.length + " total opens";
+    document.getElementById("statClicks").textContent = uniqueClicks;
+    document.getElementById("statClicksSub").textContent = clicks.length + " total clicks";
+
+    if(totalEvents > 0){
+      document.getElementById("statOpenRate").textContent = Math.round((uniqueOpens/totalEvents)*100) + "%";
+      document.getElementById("statOpenRateSub").textContent = totalEvents + " total events";
+      document.getElementById("statClickRate").textContent = Math.round((uniqueClicks/totalEvents)*100) + "%";
+      document.getElementById("statClickRateSub").textContent = totalEvents + " total events";
+    } else {
+      document.getElementById("statOpenRate").textContent = "—";
+      document.getElementById("statOpenRateSub").textContent = "0 events";
+      document.getElementById("statClickRate").textContent = "—";
+      document.getElementById("statClickRateSub").textContent = "0 events";
+    }
+
+    // ---- 14-day trend ----
+    const days = [];
+    for(let i = 13; i >= 0; i--){
+      const d = new Date();
+      d.setHours(0,0,0,0);
+      d.setDate(d.getDate() - i);
+      days.push(d);
+    }
+    const dayLabels = days.map(d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    const dayKey = (iso) => {
+      const d = new Date(iso); d.setHours(0,0,0,0); return d.getTime();
+    };
+    const opensByDay = days.map(d => opens.filter(r => dayKey(r.created_at) === d.getTime()).length);
+    const clicksByDay = days.map(d => clicks.filter(r => dayKey(r.created_at) === d.getTime()).length);
+
+    const ctx = document.getElementById("trendChart");
+    if(trendChart) trendChart.destroy();
+    trendChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: dayLabels,
+        datasets: [
+          { label:'Opens', data: opensByDay, borderColor:'#F2A93B', backgroundColor:'rgba(242,169,59,.15)', tension:.35, fill:true, pointRadius:3 },
+          { label:'Clicks', data: clicksByDay, borderColor:'#3ECF8E', backgroundColor:'rgba(62,207,142,.12)', tension:.35, fill:true, pointRadius:3 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ color:'#C7D1DD', font:{family:'Public Sans'} } } },
+        scales:{
+          x:{ ticks:{color:'#8FA0B5'}, grid:{color:'rgba(255,255,255,.06)'} },
+          y:{ beginAtZero:true, ticks:{color:'#8FA0B5', precision:0}, grid:{color:'rgba(255,255,255,.06)'} }
+        }
+      }
+    });
+
+    // ---- Recent activity (overview) ----
+    const recentEl = document.getElementById("recentActivity");
+    if(rows.length === 0){
+      recentEl.innerHTML = '<p class="empty">No activity recorded yet.</p>';
+    } else {
+      recentEl.innerHTML = '<table><tbody>' + rows.slice(0,8).map(r => `
+        <tr>
+          <td style="width:90px;">${badge(r.action)}</td>
+          <td>${r.company || '—'}</td>
+          <td>${r.email || '—'}</td>
+          <td style="text-align:right;color:var(--muted);">${timeAgo(r.created_at)}</td>
+        </tr>`).join('') + '</tbody></table>';
+    }
+
+    // ---- Opens table ----
+    const opensBody = document.getElementById("opensTable");
+    document.getElementById("opensEmpty").style.display = opens.length ? "none" : "block";
+    opensBody.innerHTML = opens.map(r => `
+      <tr><td>${r.company || '—'}</td><td>${r.email || '—'}</td><td>${timeAgo(r.created_at)}</td></tr>
+    `).join('');
+
+    // ---- Clicks table ----
+    const clicksBody = document.getElementById("clicksTable");
+    document.getElementById("clicksEmpty").style.display = clicks.length ? "none" : "block";
+    clicksBody.innerHTML = clicks.map(r => `
+      <tr><td>${r.company || '—'}</td><td>${r.email || '—'}</td><td><span class="truncate">${r.link_url || '—'}</span></td><td>${timeAgo(r.created_at)}</td></tr>
+    `).join('');
+
+    // ---- Full activity log ----
+    const activityBody = document.getElementById("activityTable");
+    document.getElementById("activityEmpty").style.display = rows.length ? "none" : "block";
+    activityBody.innerHTML = rows.map(r => `
+      <tr><td>${badge(r.action)}</td><td>${r.company || '—'}</td><td>${r.email || '—'}</td><td>${timeAgo(r.created_at)}</td></tr>
+    `).join('');
+  }
+
+  loadAll();
+  setInterval(loadAll, 30000); // auto-refresh every 30s
+</script>
+
+</body>
+</html>
